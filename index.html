@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#7c4dff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mini Photobooth">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Mini Photobooth</title>
+<style>
+:root{--purple:#7c4dff;--ink:#26222e;--paper:#fff;--bg:#f7f5fb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:linear-gradient(135deg,#7c4dff,#b58cff);color:white;padding:22px 18px 26px;border-radius:0 0 24px 24px}
+h1{font-size:25px;margin:0 0 5px}header p{margin:0;opacity:.94;font-size:14px}
+main{max-width:900px;margin:auto;padding:16px}
+.controls{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 15px}
+button,.filelabel{border:0;border-radius:13px;padding:12px 15px;font-size:14px;font-weight:650;background:var(--purple);color:white;cursor:pointer}
+button.secondary,.filelabel{background:#ebe5ff;color:#4b2aa8}button:disabled{opacity:.4}
+.cameraBox{background:#19171d;border-radius:18px;overflow:hidden;position:relative;aspect-ratio:4/3;display:grid;place-items:center;color:white}
+video{width:100%;height:100%;object-fit:cover;display:none}.cameraHint{padding:22px;text-align:center}.cameraBox.active video{display:block}.cameraBox.active .cameraHint{display:none}
+.cameraActions{display:flex;gap:10px;margin:10px 0 18px}.cameraActions button{flex:1}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.strip{background:#fff;border:1px solid #e5e0ed;border-radius:16px;padding:10px;box-shadow:0 3px 14px #2414440b}
+.strip h2{text-align:center;font-size:13px;letter-spacing:.07em;margin:2px 0 9px;color:#6d647b}
+.stripprint{background:#fff;border:1px dashed #aaa;padding:6px;display:grid;gap:5px}
+.photo{aspect-ratio:1.12/1;background:#eee;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;color:#8b8493;font-size:12px}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}.photo button{position:absolute;right:4px;top:4px;padding:5px 7px;font-size:11px;border-radius:8px;background:#222c}
+.note{font-size:12px;color:#6e6878;line-height:1.45;margin:14px 2px}
+#status{font-size:13px;color:#57458b;margin:10px 0;min-height:18px}
+footer{text-align:center;color:#81798d;font-size:11px;padding:15px}
+@media(min-width:700px){.layout{gap:22px}.strip{padding:15px}.stripprint{padding:10px;gap:8px}}
+/* Print page is true 4R: 100 x 150 mm, with two 50 x 150 mm strips */
+@page{size:100mm 150mm;margin:0}
+@media print{
+ body{background:#fff;margin:0;width:100mm;height:150mm}
+ header,main>h2,.controls,.cameraBox,.cameraActions,#status,.note,footer{display:none!important}
+ main{padding:0;margin:0;width:100mm;max-width:none}
+ .layout{display:grid;grid-template-columns:50mm 50mm;gap:0;width:100mm;height:150mm}
+ .strip{border:0;border-radius:0;box-shadow:none;padding:0;width:50mm;height:150mm;break-inside:avoid}
+ .strip h2{display:none}
+ .stripprint{height:150mm;width:50mm;border:0;padding:2.3mm 3mm 3.5mm;gap:1.2mm;grid-template-rows:repeat(4,1fr)}
+ .photo{aspect-ratio:auto;min-height:0;border:0;background:white}
+ .photo button{display:none!important}
+ .photo img{object-fit:cover}
+ .strip:first-child{border-right:.2mm dashed #888}
+}
+</style>
+</head>
+<body>
+<header><h1>📸 Mini Photobooth</h1><p>4 gambar unik · strip kanan salinan strip kiri · cetak 4R</p></header>
+<main>
+<div class="controls">
+<button id="start">Buka kamera</button>
+<label class="filelabel" for="upload">Pilih gambar</label><input id="upload" type="file" accept="image/*" multiple hidden>
+<button class="secondary" id="flip">Tukar kamera</button>
+</div>
+<div class="cameraBox" id="cameraBox"><video id="video" autoplay playsinline></video><div class="cameraHint">Tekan “Buka kamera” untuk mula.<br><small>Benarkan akses kamera apabila iPhone bertanya.</small></div></div>
+<div class="cameraActions"><button id="capture" disabled>● Ambil gambar</button><button id="retakeAll" class="secondary">Kosongkan semua</button></div>
+<div id="status">Gambar 1 daripada 4 akan diisi dahulu.</div>
+<h2>Pratonton cetakan</h2>
+<div class="layout">
+<section class="strip"><h2>STRIP KIRI · GAMBAR ASAL</h2><div class="stripprint" id="left"></div></section>
+<section class="strip"><h2>STRIP KANAN · SALINAN</h2><div class="stripprint" id="right"></div></section>
+</div>
+<div class="controls" style="margin-top:15px"><button id="export">Eksport PDF / Cetak 4R</button><button class="secondary" id="saveImages">Simpan gambar</button></div>
+<p class="note">Cetakan: dua strip menegak pada satu halaman 4R 10 × 15 cm, setiap strip 5 × 15 cm. Untuk ukuran tepat, dalam dialog cetak pilih kertas 4 × 6 inci / 10 × 15 cm, skala 100% atau Actual Size, dan matikan “Fit to page” jika ada. Jika simpan sebagai PDF, pilih saiz kertas 4R. Kualiti dan margin akhir bergantung pada aplikasi cetak/printer.</p>
+</main>
+<footer>Mini Photobooth · Gambar kekal dalam peranti ini; tidak dihantar ke pelayan oleh app ini.</footer>
+<script>
+const video=document.querySelector('#video'), box=document.querySelector('#cameraBox'), cap=document.querySelector('#capture'), statusEl=document.querySelector('#status');
+const left=document.querySelector('#left'), right=document.querySelector('#right');
+let stream=null, facing='user', photos=[null,null,null,null];
+function render(){
+ left.innerHTML='';right.innerHTML='';
+ for(let i=0;i<4;i++){
+  const make=(copy)=>{let cell=document.createElement('div');cell.className='photo';
+   if(photos[i]){let img=document.createElement('img');img.src=photos[i];img.alt='Gambar '+(i+1);cell.appendChild(img)}
+   else{cell.textContent='Gambar '+(i+1)}
+   if(!copy){let b=document.createElement('button');b.textContent='Ulang';b.title='Ambil semula gambar ini';b.onclick=()=>{current=i;statusEl.textContent='Sedia ambil semula gambar '+(i+1)+'.';window.scrollTo({top:0,behavior:'smooth'})};cell.appendChild(b)}
+   return cell};
+  left.appendChild(make(false));right.appendChild(make(true));
+ }
+ const next=photos.findIndex(p=>!p);statusEl.textContent=next<0?'Lengkap! Empat gambar sudah tersedia.':'Gambar '+(next+1)+' daripada 4 akan diisi dahulu.';
+}
+let current=0;
+function firstEmpty(){let n=photos.findIndex(p=>!p);return n<0?3:n}
+async function startCamera(){
+ try{if(stream)stream.getTracks().forEach(t=>t.stop());
+ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing},audio:false});
+ video.srcObject=stream;box.classList.add('active');cap.disabled=false;document.querySelector('#start').textContent='Kamera aktif';
+ }catch(e){statusEl.textContent='Kamera tidak dapat dibuka. Benarkan akses kamera atau gunakan “Pilih gambar”.';}
+}
+document.querySelector('#start').onclick=startCamera;
+document.querySelector('#flip').onclick=()=>{facing=facing==='user'?'environment':'user';if(stream)startCamera()};
+cap.onclick=()=>{
+ if(!video.videoWidth)return;
+ current=photos.findIndex(p=>!p);if(current<0)current=3;
+ const c=document.createElement('canvas');c.width=video.videoWidth;c.height=video.videoHeight;c.getContext('2d').drawImage(video,0,0);
+ photos[current]=c.toDataURL('image/jpeg',.92);current=Math.min(current+1,3);render();
+};
+document.querySelector('#retakeAll').onclick=()=>{photos=[null,null,null,null];current=0;render()};
+document.querySelector('#upload').onchange=async e=>{
+ const files=[...e.target.files].slice(0,4);
+ for(let i=0;i<files.length;i++){photos[i]=await new Promise((res,rej)=>{let r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(files[i])})}
+ current=firstEmpty();render();e.target.value='';
+};
+document.querySelector('#export').onclick=()=>{
+ if(photos.some(p=>!p)){if(!confirm('Ada ruang gambar kosong. Teruskan ke cetakan?'))return}
+ window.print();
+};
+document.querySelector('#saveImages').onclick=()=>{
+ if(!photos.some(p=>p)){statusEl.textContent='Ambil atau pilih gambar dahulu.';return}
+ const a=document.createElement('a');a.href=photos.find(Boolean);a.download='mini-photobooth-gambar.jpg';a.click();
+};
+render();
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body></html>
